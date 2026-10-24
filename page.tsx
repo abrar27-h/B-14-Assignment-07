@@ -1,80 +1,122 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { INITIAL_PRODUCTS, Product } from '@/lib/data';
+import { toBengaliNumeral } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
-import { ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Store, ShieldAlert } from 'lucide-react';
 
-export default function SignInPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export default function ProductDetailPage() {
+  const params = useParams();
   const router = useRouter();
+  const slug = params.slug as string;
 
-  const handleSignIn = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !password) {
-      toast.error('সবগুলো ঘর পূরণ করুন');
+  const [product, setProduct] = useState<Product | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const storedUser = localStorage.getItem('bazardor_user');
+    if (!storedUser) {
+      toast.error('পণ্য বিস্তারিত দেখার জন্য সাইন ইন করুন');
+      router.push('/signin');
       return;
     }
+    setUser(JSON.parse(storedUser));
 
-    const name = email.split('@')[0];
-    localStorage.setItem('bazardor_user', JSON.stringify({ email, name }));
-    toast.success('সফলভাবে সাইন ইন করেছেন!');
-    router.push('/');
-    setTimeout(() => window.location.reload(), 300);
-  };
+    const found = INITIAL_PRODUCTS.find(
+      (p) => p.slug === slug || p.id.toString() === slug
+    );
+    if (found) {
+      setProduct(found);
+    } else {
+      setProduct(INITIAL_PRODUCTS[0]);
+    }
+  }, [slug, router]);
+
+  if (!user || !product) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-20 text-center">
+        <ShieldAlert className="w-12 h-12 text-emerald-600 mx-auto mb-4 animate-bounce" />
+        <p className="text-lg font-bold text-gray-700">লোড হচ্ছে...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-md mx-auto my-16 px-4">
-      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-xl space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-block p-3 bg-emerald-100 text-emerald-600 rounded-2xl mb-2">
-            <ShoppingCart className="w-8 h-8" />
-          </div>
-          <h1 className="text-2xl font-black text-gray-900">সাইন ইন করুন</h1>
-          <p className="text-sm text-gray-500">আপনার অ্যাকাউন্টে প্রবেশ করুন</p>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 hover:text-emerald-700"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>হোম পেজে ফিরে যান</span>
+      </Link>
+
+      {/* Summary Header */}
+      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-8">
+        <div className="text-7xl p-6 bg-emerald-50 rounded-2xl">{product.emoji}</div>
+        <div className="space-y-3 text-center md:text-left flex-1">
+          <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full">
+            {product.category}
+          </span>
+          <h1 className="text-3xl font-black text-gray-900">{product.name}</h1>
+          <p className="text-sm text-gray-500 font-medium">{product.unit} এর পাইকারি ও খুচরা বাজার দর</p>
         </div>
+      </div>
 
-        <form onSubmit={handleSignIn} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">ইমেইল</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
-              placeholder="example@gmail.com"
-              required
-            />
-          </div>
+      {/* Price Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl text-center">
+          <p className="text-xs font-bold text-emerald-700 uppercase">সর্বনিম্ন দাম</p>
+          <p className="text-2xl font-black text-emerald-900 mt-1">
+            {toBengaliNumeral(product.minPrice)} টাকা
+          </p>
+        </div>
+        <div className="bg-blue-50 border border-blue-200 p-6 rounded-2xl text-center">
+          <p className="text-xs font-bold text-blue-700 uppercase">গড় দাম</p>
+          <p className="text-2xl font-black text-blue-900 mt-1">
+            {toBengaliNumeral(product.avgPrice)} টাকা
+          </p>
+        </div>
+        <div className="bg-rose-50 border border-rose-200 p-6 rounded-2xl text-center">
+          <p className="text-xs font-bold text-rose-700 uppercase">সর্বোচ্চ দাম</p>
+          <p className="text-2xl font-black text-rose-900 mt-1">
+            {toBengaliNumeral(product.maxPrice)} টাকা
+          </p>
+        </div>
+      </div>
 
-          <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase mb-1">পাসওয়ার্ড</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
-              placeholder="••••••••"
-              required
-            />
-          </div>
+      {/* Market Breakdown Table */}
+      <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm space-y-6">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <Store className="w-5 h-5 text-emerald-600" />
+          <span>বাজারভিত্তিক আজকের দাম</span>
+        </h2>
 
-          <button
-            type="submit"
-            className="w-full py-3 bg-emerald-600 text-white font-bold rounded-xl shadow-lg hover:bg-emerald-700 transition-all text-sm"
-          >
-            সাইন ইন
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-600">
-          অ্যাকাউন্ট নেই?{' '}
-          <Link href="/signup" className="font-bold text-emerald-600 hover:underline">
-            সাইন আপ করুন
-          </Link>
-        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-gray-200 text-sm font-bold text-gray-500">
+                <th className="py-3 px-4">বাজারের নাম</th>
+                <th className="py-3 px-4">দাম</th>
+                <th className="py-3 px-4 text-right">সর্বশেষ আপডেট</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 text-sm font-medium text-gray-800">
+              {product.markets.map((m, idx) => (
+                <tr key={idx} className="hover:bg-slate-50">
+                  <td className="py-4 px-4 font-bold">{m.name}</td>
+                  <td className="py-4 px-4 text-emerald-600 font-extrabold">
+                    {toBengaliNumeral(m.price)} টাকা
+                  </td>
+                  <td className="py-4 px-4 text-right text-gray-400">{m.update}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
